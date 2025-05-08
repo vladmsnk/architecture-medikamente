@@ -1,0 +1,48 @@
+@startuml Medicamente_C4_Containers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title «Медикаменте» — Диаграмма контейнеров
+
+Person(patient, "Пациент", "Записывается на приём, просматривает свои данные")
+Person(receptionist, "Ресепшн", "Управляет записями через портал ресепшена")
+
+System_Boundary(med_system, "Платформа «Медикаменте»") {
+  Container(api_gateway, "API Gateway / IAP", "Go", "Маршрутизация, OIDC аутентификация, сбор логов")
+  Container(idp, "Identity Provider (IdP)", "Go", "OpenID Connect, интеграция с AD")
+  Container(iam_service, "IAM Service", "Go", "Хранение и оценка ABAC политик")
+  ContainerDb(postgres, "PostgreSQL", "PostgreSQL", "Пациенты, визиты, анализы, CRM данные")
+
+  Container(client_portal, "Портал клиентов", "Go", "Запись к врачу, просмотр визитов и анализов")
+  Container(staff_portal, "Портал ресепшена", "Go", "Подтверждение/отклонение записей, расписание врачей")
+  Container(payment_gateway, "Платёжный шлюз", "Go", "Создание и верификация счетов")
+  Container(crm_service, "CRM Service", "Go", "Сбор данных о клиентах")
+  Container(lab_integration, "Lab Integration Service", "Go", "Обмен результатами анализов по контракту API")
+  Container(siem, "SIEM‑система", "Go", "Анализ и хранение логов")
+}
+
+System_Ext(ad, "Active Directory", "LDAP", "Учётные записи пользователей")
+System_Ext(lab_system, "Лаборатория", "REST API", "Поставляет результаты анализов")
+
+Rel(patient, client_portal, "HTTPS: REST API")
+Rel(receptionist, staff_portal, "HTTPS: REST API")
+
+Rel(client_portal, api_gateway, "REST JSON")
+Rel(staff_portal, api_gateway, "REST JSON")
+Rel(payment_gateway, api_gateway, "REST JSON")
+Rel(crm_service, api_gateway, "REST JSON")
+Rel(lab_integration, api_gateway, "REST JSON")
+
+Rel(api_gateway, idp, "OIDC: Authenticate & Refresh Tokens")
+Rel(api_gateway, iam_service, "Query ABAC Policies")
+Rel(api_gateway, postgres, "SQL: Read/Write patient & CRM data")
+Rel(api_gateway, payment_gateway, "REST: Create and verify invoices")
+Rel(api_gateway, crm_service, "REST: Manage client profiles")
+Rel(api_gateway, lab_integration, "REST: Exchange lab results")
+Rel(api_gateway, siem, "Send audit logs")
+
+Rel(idp, ad, "LDAP: User attributes")
+Rel(lab_integration, lab_system, "REST: Lab API contract")
+Rel(payment_gateway, postgres, "SQL: Record payment status")
+Rel(crm_service, postgres, "SQL: Store CRM data")
+
+@enduml
